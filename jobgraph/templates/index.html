@@ -1,0 +1,1941 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>JobGraph - Smart Job Recommendations</title>
+
+    <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #111827;
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 40px;
+            margin: 0 0 8px;
+        }
+
+        .header p {
+            color: #6b7280;
+            font-size: 17px;
+        }
+
+        .card {
+            background: white;
+            padding: 28px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+        }
+
+        /* =========================
+           DASHBOARD
+        ========================= */
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 22px;
+            border-radius: 14px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .stat-description {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        /* =========================
+           PROFILE
+        ========================= */
+
+        .profile-name {
+            font-size: 25px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .experience {
+            color: #6b7280;
+        }
+
+        .profile-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .profile-skill {
+            background: #eef2ff;
+            color: #3730a3;
+            padding: 7px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        /* =========================
+           SKILLS
+        ========================= */
+
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .skill {
+            padding: 10px 17px;
+            border: 1px solid #d1d5db;
+            border-radius: 25px;
+            cursor: pointer;
+            background: white;
+            transition: 0.2s;
+        }
+
+        .skill:hover {
+            border-color: #111827;
+        }
+
+        .skill.selected {
+            background: #111827;
+            color: white;
+            border-color: #111827;
+        }
+
+        .button {
+            padding: 13px 22px;
+            border: none;
+            border-radius: 9px;
+            cursor: pointer;
+            background: #111827;
+            color: white;
+            font-size: 16px;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        /* =========================
+           CAREER GRAPH
+        ========================= */
+
+        #careerGraph {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+
+        .graph-help {
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            font-size: 14px;
+            color: #4b5563;
+        }
+
+        /* =========================
+           JOBS
+        ========================= */
+
+        #results {
+            margin-top: 30px;
+        }
+
+        .job {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 22px;
+            margin-top: 15px;
+            background: white;
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .job h3 {
+            margin: 0 0 6px;
+            font-size: 21px;
+        }
+
+        .company {
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .match {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .match-bar {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .match-fill {
+            height: 100%;
+            background: #111827;
+            border-radius: 10px;
+        }
+
+        .skills-section {
+            margin-top: 20px;
+        }
+
+        .skills-section h4 {
+            margin-bottom: 10px;
+        }
+
+        .skill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .skill-tag {
+            padding: 6px 11px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .matching {
+            background: #ecfdf5;
+            color: #047857;
+        }
+
+        .missing {
+            background: #fff7ed;
+            color: #c2410c;
+        }
+
+        /* =========================
+           LEARNING
+        ========================= */
+
+        .learning {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+        }
+
+        .learning h4 {
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+
+        .course {
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .course:last-child {
+            border-bottom: none;
+        }
+
+        .course-name {
+            font-weight: bold;
+        }
+
+        .course-skill {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 3px;
+        }
+
+        /* =========================
+           RELATED SKILLS
+        ========================= */
+
+        .related-group {
+            padding: 14px;
+            margin-top: 10px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+        }
+
+        .related-current {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .related-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .related-skill {
+            background: #eef2ff;
+            color: #3730a3;
+            padding: 7px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .loading {
+            color: #6b7280;
+        }
+
+        .empty {
+            color: #6b7280;
+            padding: 15px 0;
+        }
+
+        .error {
+            color: #b91c1c;
+            padding: 15px 0;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 850px) {
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+        }
+
+        @media (max-width: 600px) {
+
+            .container {
+                padding: 25px 15px;
+            }
+
+            .header h1 {
+                font-size: 30px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .job-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            #careerGraph {
+                height: 450px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <h1>
+            JobGraph
+        </h1>
+
+        <p>
+            Smart job and skill recommendations
+            powered by your career graph.
+        </p>
+
+    </div>
+
+
+    <!-- DASHBOARD -->
+
+    <div class="stats">
+
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Your Skills
+            </div>
+
+            <div
+                class="stat-value"
+                id="skillCount"
+            >
+                -
+            </div>
+
+            <div class="stat-description">
+                Skills in your profile
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Best Job Match
+            </div>
+
+            <div
+                class="stat-value"
+                id="bestMatch"
+            >
+                -
+            </div>
+
+            <div class="stat-description">
+                Highest matching job
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Skills to Improve
+            </div>
+
+            <div
+                class="stat-value"
+                id="missingCount"
+            >
+                -
+            </div>
+
+            <div class="stat-description">
+                Skills from job matches
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Related Skills
+            </div>
+
+            <div
+                class="stat-value"
+                id="relatedCount"
+            >
+                -
+            </div>
+
+            <div class="stat-description">
+                Skills you could learn
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- CANDIDATE PROFILE -->
+
+    <div
+        class="card"
+        id="profileCard"
+    >
+
+        <h2>
+            Candidate Profile
+        </h2>
+
+        <p class="loading">
+            Loading profile...
+        </p>
+
+    </div>
+
+
+    <!-- RELATED SKILLS -->
+
+    <div
+        class="card"
+        id="relatedCard"
+    >
+
+        <h2>
+            Skills You Could Learn Next
+        </h2>
+
+        <p class="loading">
+            Finding related skills...
+        </p>
+
+    </div>
+
+
+    <!-- CAREER GRAPH -->
+
+    <div class="card">
+
+        <h2>
+            Your Career Graph
+        </h2>
+
+        <p class="graph-help">
+            Click a node to highlight its
+            connected career relationships.
+        </p>
+
+        <div id="careerGraph"></div>
+
+        <div class="legend">
+
+            <span class="legend-item">
+                Candidate
+            </span>
+
+            <span class="legend-item">
+                Skill
+            </span>
+
+            <span class="legend-item">
+                Related Skill
+            </span>
+
+            <span class="legend-item">
+                Job
+            </span>
+
+            <span class="legend-item">
+                Company
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- SKILL SELECTION -->
+
+    <div class="card">
+
+        <h2>
+            Select Your Skills
+        </h2>
+
+        <p>
+            Choose the skills you want to use
+            for job recommendations.
+        </p>
+
+
+        <div class="skills">
+
+
+            <div
+                class="skill"
+                data-skill="Python"
+            >
+                Python
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="SQL"
+            >
+                SQL
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="JavaScript"
+            >
+                JavaScript
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="React"
+            >
+                React
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="Java"
+            >
+                Java
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="FastAPI"
+            >
+                FastAPI
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="Docker"
+            >
+                Docker
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="AWS"
+            >
+                AWS
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="Git"
+            >
+                Git
+            </div>
+
+
+            <div
+                class="skill"
+                data-skill="Machine Learning"
+            >
+                Machine Learning
+            </div>
+
+
+        </div>
+
+
+        <button
+            class="button"
+            onclick="findJobs()"
+        >
+            Find My Jobs
+        </button>
+
+
+        <div id="results"></div>
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+
+/* =========================================
+   CANDIDATE PROFILE
+========================================= */
+
+
+async function loadCandidate() {
+
+    const profileCard =
+        document.getElementById(
+            "profileCard"
+        );
+
+
+    try {
+
+        const response =
+            await fetch("/candidate");
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Unable to load profile."
+            );
+
+        }
+
+
+        document.getElementById(
+            "skillCount"
+        ).textContent =
+            data.skills.length;
+
+
+        profileCard.innerHTML = `
+
+            <h2>
+                Candidate Profile
+            </h2>
+
+            <div class="profile-name">
+                ${data.name}
+            </div>
+
+            <div class="experience">
+                ${data.experience_level}
+            </div>
+
+            <div class="profile-skills">
+
+                ${data.skills
+                    .map(skill => `
+
+                        <span class="profile-skill">
+                            ${skill}
+                        </span>
+
+                    `)
+                    .join("")}
+
+            </div>
+
+        `;
+
+
+        data.skills.forEach(
+            candidateSkill => {
+
+                document
+                    .querySelectorAll(".skill")
+                    .forEach(button => {
+
+                        if (
+                            button.dataset.skill ===
+                            candidateSkill
+                        ) {
+
+                            button.classList.add(
+                                "selected"
+                            );
+
+                        }
+
+                    });
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        profileCard.innerHTML = `
+
+            <h2>
+                Candidate Profile
+            </h2>
+
+            <p class="error">
+                Unable to load candidate profile.
+            </p>
+
+        `;
+
+    }
+
+}
+
+
+/* =========================================
+   RELATED SKILLS
+========================================= */
+
+
+async function loadRelatedSkills() {
+
+    const relatedCard =
+        document.getElementById(
+            "relatedCard"
+        );
+
+
+    try {
+
+        const response =
+            await fetch("/skill-path");
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Unable to load related skills."
+            );
+
+        }
+
+
+        const recommendations =
+            data.recommendations || [];
+
+
+        const uniqueSkills =
+            new Set();
+
+
+        recommendations.forEach(
+            recommendation => {
+
+                uniqueSkills.add(
+                    recommendation.recommended_skill
+                );
+
+            }
+        );
+
+
+        document.getElementById(
+            "relatedCount"
+        ).textContent =
+            uniqueSkills.size;
+
+
+        if (
+            recommendations.length === 0
+        ) {
+
+            relatedCard.innerHTML = `
+
+                <h2>
+                    Skills You Could Learn Next
+                </h2>
+
+                <p class="empty">
+                    No related skill recommendations
+                    found yet.
+                </p>
+
+            `;
+
+            return;
+        }
+
+
+        const grouped = {};
+
+
+        recommendations.forEach(
+            recommendation => {
+
+                const current =
+                    recommendation.current_skill;
+
+                const recommended =
+                    recommendation.recommended_skill;
+
+
+                if (!grouped[current]) {
+
+                    grouped[current] = [];
+
+                }
+
+
+                if (
+                    !grouped[current]
+                        .includes(recommended)
+                ) {
+
+                    grouped[current].push(
+                        recommended
+                    );
+
+                }
+
+            }
+        );
+
+
+        let html = `
+
+            <h2>
+                Skills You Could Learn Next
+            </h2>
+
+            <p>
+                Explore skills related to
+                what you already know.
+            </p>
+
+        `;
+
+
+        Object.keys(grouped).forEach(
+            currentSkill => {
+
+                html += `
+
+                    <div class="related-group">
+
+                        <div class="related-current">
+                            Because you know
+                            ${currentSkill}:
+                        </div>
+
+                        <div class="related-list">
+
+                            ${grouped[currentSkill]
+                                .map(
+                                    skill => `
+
+                                    <span
+                                        class="related-skill"
+                                    >
+                                        → ${skill}
+                                    </span>
+
+                                `
+                                )
+                                .join("")}
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            }
+        );
+
+
+        relatedCard.innerHTML =
+            html;
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        relatedCard.innerHTML = `
+
+            <h2>
+                Skills You Could Learn Next
+            </h2>
+
+            <p class="error">
+                Unable to load related skills.
+            </p>
+
+        `;
+
+    }
+
+}
+
+
+/* =========================================
+   CAREER GRAPH
+========================================= */
+
+
+async function loadGraph() {
+
+    const graphElement =
+        document.getElementById(
+            "careerGraph"
+        );
+
+
+    try {
+
+        const response =
+            await fetch("/graph");
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Unable to load graph."
+            );
+
+        }
+
+
+        const elements = [];
+
+
+        /* NODES */
+
+        data.nodes.forEach(node => {
+
+            elements.push({
+
+                data: {
+
+                    id:
+                        node.id,
+
+                    label:
+                        node.label,
+
+                    type:
+                        node.type
+
+                }
+
+            });
+
+        });
+
+
+        /* EDGES */
+
+        data.edges.forEach(
+            (edge, index) => {
+
+                elements.push({
+
+                    data: {
+
+                        id:
+                            "edge_" + index,
+
+                        source:
+                            edge.from,
+
+                        target:
+                            edge.to
+
+                    }
+
+                });
+
+            }
+        );
+
+
+        /* CYTOSCAPE */
+
+        const cy =
+            cytoscape({
+
+                container:
+                    graphElement,
+
+                elements:
+                    elements,
+
+                layout: {
+
+                    name:
+                        "cose",
+
+                    animate:
+                        true,
+
+                    padding:
+                        30,
+
+                    nodeRepulsion:
+                        7000,
+
+                    idealEdgeLength:
+                        150
+
+                },
+
+
+                style: [
+
+                    /* DEFAULT NODE */
+
+                    {
+                        selector:
+                            "node",
+
+                        style: {
+
+                            "label":
+                                "data(label)",
+
+                            "text-valign":
+                                "center",
+
+                            "text-halign":
+                                "center",
+
+                            "font-size":
+                                "12px",
+
+                            "width":
+                                "55px",
+
+                            "height":
+                                "55px",
+
+                            "background-color":
+                                "#dbeafe",
+
+                            "border-width":
+                                2,
+
+                            "border-color":
+                                "#93c5fd",
+
+                            "color":
+                                "#111827"
+
+                        }
+
+                    },
+
+
+                    /* CANDIDATE */
+
+                    {
+                        selector:
+                            'node[type="candidate"]',
+
+                        style: {
+
+                            "background-color":
+                                "#111827",
+
+                            "color":
+                                "#ffffff",
+
+                            "width":
+                                "75px",
+
+                            "height":
+                                "75px",
+
+                            "font-size":
+                                "13px",
+
+                            "font-weight":
+                                "bold"
+
+                        }
+
+                    },
+
+
+                    /* SKILL */
+
+                    {
+                        selector:
+                            'node[type="skill"]',
+
+                        style: {
+
+                            "background-color":
+                                "#dbeafe",
+
+                            "border-color":
+                                "#60a5fa"
+
+                        }
+
+                    },
+
+
+                    /* RELATED SKILL */
+
+                    {
+                        selector:
+                            'node[type="related"]',
+
+                        style: {
+
+                            "background-color":
+                                "#ede9fe",
+
+                            "border-color":
+                                "#a78bfa"
+
+                        }
+
+                    },
+
+
+                    /* JOB */
+
+                    {
+                        selector:
+                            'node[type="job"]',
+
+                        style: {
+
+                            "background-color":
+                                "#dcfce7",
+
+                            "border-color":
+                                "#4ade80",
+
+                            "width":
+                                "70px",
+
+                            "height":
+                                "70px"
+
+                        }
+
+                    },
+
+
+                    /* COMPANY */
+
+                    {
+                        selector:
+                            'node[type="company"]',
+
+                        style: {
+
+                            "background-color":
+                                "#fef3c7",
+
+                            "border-color":
+                                "#f59e0b",
+
+                            "width":
+                                "70px",
+
+                            "height":
+                                "70px"
+
+                        }
+
+                    },
+
+
+                    /* NORMAL EDGE */
+
+                    {
+                        selector:
+                            "edge",
+
+                        style: {
+
+                            "width":
+                                2,
+
+                            "line-color":
+                                "#9ca3af",
+
+                            "target-arrow-color":
+                                "#9ca3af",
+
+                            "target-arrow-shape":
+                                "triangle",
+
+                            "curve-style":
+                                "bezier",
+
+                            "opacity":
+                                0.8
+
+                        }
+
+                    },
+
+
+                    /* HIGHLIGHTED NODE */
+
+                    {
+                        selector:
+                            "node.highlighted",
+
+                        style: {
+
+                            "background-color":
+                                "#111827",
+
+                            "border-color":
+                                "#111827",
+
+                            "border-width":
+                                4,
+
+                            "color":
+                                "#ffffff",
+
+                            "opacity":
+                                1,
+
+                            "z-index":
+                                999
+
+                        }
+
+                    },
+
+
+                    /* HIGHLIGHTED EDGE */
+
+                    {
+                        selector:
+                            "edge.highlighted",
+
+                        style: {
+
+                            "width":
+                                5,
+
+                            "line-color":
+                                "#111827",
+
+                            "target-arrow-color":
+                                "#111827",
+
+                            "target-arrow-shape":
+                                "triangle",
+
+                            "opacity":
+                                1,
+
+                            "z-index":
+                                999
+
+                        }
+
+                    }
+
+                ]
+
+            });
+
+
+        /* =================================
+           NODE CLICK
+        ================================= */
+
+
+        cy.on(
+            "tap",
+            "node",
+            event => {
+
+                const node =
+                    event.target;
+
+
+                /* Clear previous */
+
+                cy.elements()
+                    .removeClass(
+                        "highlighted"
+                    );
+
+
+                /* Highlight clicked node */
+
+                node.addClass(
+                    "highlighted"
+                );
+
+
+                /* Highlight connected nodes */
+
+                node
+                    .connectedNodes()
+                    .addClass(
+                        "highlighted"
+                    );
+
+
+                /* Highlight connected edges */
+
+                node
+                    .connectedEdges()
+                    .addClass(
+                        "highlighted"
+                    );
+
+            }
+        );
+
+
+        /* =================================
+           CLEAR HIGHLIGHT
+        ================================= */
+
+
+        cy.on(
+            "tap",
+            event => {
+
+                if (
+                    event.target === cy
+                ) {
+
+                    cy.elements()
+                        .removeClass(
+                            "highlighted"
+                        );
+
+                }
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        graphElement.innerHTML = `
+
+            <p class="error">
+                Unable to load career graph.
+            </p>
+
+        `;
+
+    }
+
+}
+
+
+/* =========================================
+   SKILL BUTTONS
+========================================= */
+
+
+const skillButtons =
+    document.querySelectorAll(
+        ".skill"
+    );
+
+
+skillButtons.forEach(
+    button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                button.classList.toggle(
+                    "selected"
+                );
+
+            }
+        );
+
+    }
+);
+
+
+/* =========================================
+   JOB RECOMMENDATIONS
+========================================= */
+
+
+async function findJobs() {
+
+    const selectedSkills = [];
+
+
+    document
+        .querySelectorAll(
+            ".skill.selected"
+        )
+        .forEach(skill => {
+
+            selectedSkills.push(
+                skill.dataset.skill
+            );
+
+        });
+
+
+    const results =
+        document.getElementById(
+            "results"
+        );
+
+
+    /* NO SKILLS */
+
+    if (
+        selectedSkills.length === 0
+    ) {
+
+        results.innerHTML = `
+
+            <p class="empty">
+                Please select at least one skill.
+            </p>
+
+        `;
+
+        document.getElementById(
+            "bestMatch"
+        ).textContent =
+            "-";
+
+        document.getElementById(
+            "missingCount"
+        ).textContent =
+            "-";
+
+        return;
+    }
+
+
+    results.innerHTML = `
+
+        <p class="loading">
+            Finding your best job matches...
+        </p>
+
+    `;
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/recommend",
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            skills:
+                                selectedSkills
+
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Something went wrong."
+            );
+
+        }
+
+
+        if (
+            !data.jobs ||
+            data.jobs.length === 0
+        ) {
+
+            results.innerHTML = `
+
+                <p class="empty">
+                    No matching jobs found.
+                    Try selecting more skills.
+                </p>
+
+            `;
+
+            return;
+        }
+
+
+        /* BEST MATCH */
+
+        const bestMatch =
+            Math.max(
+                ...data.jobs.map(
+                    job =>
+                        Number(
+                            job.match_percentage
+                        )
+                )
+            );
+
+
+        document.getElementById(
+            "bestMatch"
+        ).textContent =
+            bestMatch + "%";
+
+
+        /* MISSING SKILLS */
+
+        const missingSkills =
+            new Set();
+
+
+        data.jobs.forEach(
+            job => {
+
+                (
+                    job.missing_skills ||
+                    []
+                ).forEach(
+                    skill => {
+
+                        missingSkills.add(
+                            skill
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+        document.getElementById(
+            "missingCount"
+        ).textContent =
+            missingSkills.size;
+
+
+        let html = `
+
+            <h2>
+                Recommended Jobs
+            </h2>
+
+        `;
+
+
+        /* JOB CARDS */
+
+        data.jobs.forEach(job => {
+
+            const matchingSkills =
+                job.matching_skills || [];
+
+
+            const missing =
+                job.missing_skills || [];
+
+
+            const courses =
+                job.courses || [];
+
+
+            const validCourses =
+                courses.filter(
+                    course =>
+                        course &&
+                        course.name
+                );
+
+
+            let matchingHtml = "";
+
+
+            if (
+                matchingSkills.length > 0
+            ) {
+
+                matchingHtml = `
+
+                    <div class="skills-section">
+
+                        <h4>
+                            Your matching skills
+                        </h4>
+
+                        <div class="skill-list">
+
+                            ${matchingSkills
+                                .map(
+                                    skill => `
+
+                                    <span
+                                        class="
+                                            skill-tag
+                                            matching
+                                        "
+                                    >
+                                        ✓ ${skill}
+                                    </span>
+
+                                `
+                                )
+                                .join("")}
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            }
+
+
+            let missingHtml = "";
+
+
+            if (
+                missing.length > 0
+            ) {
+
+                missingHtml = `
+
+                    <div class="skills-section">
+
+                        <h4>
+                            Skills to improve
+                        </h4>
+
+                        <div class="skill-list">
+
+                            ${missing
+                                .map(
+                                    skill => `
+
+                                    <span
+                                        class="
+                                            skill-tag
+                                            missing
+                                        "
+                                    >
+                                        + ${skill}
+                                    </span>
+
+                                `
+                                )
+                                .join("")}
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            }
+
+
+            let coursesHtml = "";
+
+
+            if (
+                validCourses.length > 0
+            ) {
+
+                coursesHtml = `
+
+                    <div class="learning">
+
+                        <h4>
+                            Recommended Learning
+                        </h4>
+
+                        ${validCourses
+                            .map(
+                                course => `
+
+                                <div class="course">
+
+                                    <div class="course-name">
+                                        → ${course.name}
+                                    </div>
+
+                                    <div class="course-skill">
+                                        Helps you learn:
+                                        ${course.skill}
+                                    </div>
+
+                                </div>
+
+                            `
+                            )
+                            .join("")}
+
+                    </div>
+
+                `;
+
+            }
+
+
+            html += `
+
+                <div class="job">
+
+                    <div class="job-header">
+
+                        <div>
+
+                            <h3>
+                                ${job.title}
+                            </h3>
+
+                            <p class="company">
+                                ${job.company}
+                            </p>
+
+                        </div>
+
+                        <div class="match">
+                            ${job.match_percentage}%
+                            Match
+                        </div>
+
+                    </div>
+
+
+                    <div class="match-bar">
+
+                        <div
+                            class="match-fill"
+                            style="
+                                width:
+                                ${job.match_percentage}%
+                            "
+                        ></div>
+
+                    </div>
+
+
+                    ${matchingHtml}
+
+                    ${missingHtml}
+
+                    ${coursesHtml}
+
+                </div>
+
+            `;
+
+        });
+
+
+        results.innerHTML =
+            html;
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        results.innerHTML = `
+
+            <p class="error">
+                Unable to load recommendations.
+                Please try again.
+            </p>
+
+        `;
+
+    }
+
+}
+
+
+/* =========================================
+   INITIAL LOAD
+========================================= */
+
+
+loadCandidate();
+
+loadRelatedSkills();
+
+loadGraph();
+
+
+</script>
+
+</body>
+
+</html>
