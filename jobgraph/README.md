@@ -2,50 +2,37 @@
 
 JobGraph is a graph-based job recommendation application that connects a candidate's skills with relevant jobs, companies, related skills, and learning opportunities.
 
-The application uses Flask for the web application and CognoDB/Neo4j for storing and querying the career graph.
+The application is built using Flask and CognoDB as the graph database layer.
 
-## Features
+## Problem Statement
 
-- Candidate skill profile
-- Skill-based job recommendations
-- Job match percentage
-- Matching skills identification
-- Missing skill identification
-- Related skill recommendations
-- Recommended learning opportunities
-- Company and job relationships
-- Interactive career graph
-- Dashboard with career statistics
-- Multiple skill selection
-- Empty-selection validation
+Finding a suitable job is not only about matching a candidate with a job title. A candidate's skills are connected to job requirements, related skills, companies, and learning opportunities.
 
-## Technology Stack
+JobGraph models these relationships as a graph and uses them to provide personalized job recommendations and skill-gap analysis.
 
-- Python
-- Flask
-- CognoDB / Neo4j
-- Cypher
-- HTML
-- CSS
-- JavaScript
-- Cytoscape.js
-- python-dotenv
+## Why a Graph Database?
 
-## Project Structure
+A graph database is a natural fit for JobGraph because the main problem is based on relationships between candidates, skills, jobs, companies, and learning opportunities.
+
+The main graph relationships are:
 
 ```text
-jobgraph/
-│
-├── app.py
-│
-├── database/
-│   ├── seed.py
-│   └── candidate.py
-│
-├── templates/
-│   └── index.html
-│
-├── .gitignore
-├── .env
-├── README.md
-└── venv/
+Candidate
+   |
+   | HAS_SKILL
+   v
+ Skill
+   |
+   | RELATED_TO
+   v
+Related Skill
+
+Company
+   |
+   | OFFERS
+   v
+ Job
+   |
+   | REQUIRES
+   v
+ Skill
